@@ -164,6 +164,9 @@ fn main() {
  if argv.len()<2 {
   panic!("Expected a file");
  }
+ if !argv[1].ends_with(".mtknfkktr") {
+  panic!("Expected extension \".mtknfkktr\"");
+ }
  let code=read_to_string(argv[1].clone()).unwrap();
  let mut lexer=Lexer::init(code);
  let tokens=lexer.lex();
