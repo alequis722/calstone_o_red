@@ -2,7 +2,22 @@ use std::env::args;
 use std::process::exit;
 use std::fs::read_to_string;
 
-#[derive(Debug)]
+#[derive(Debug,Clone,PartialEq)]
+enum AstType {
+ Const,
+ Call,
+}
+
+#[derive(Debug,Clone)]
+struct Ast {
+ kind:AstType,
+ sval:Option<String>,
+ ival:Option<i32>,
+ callee:Option<String>,
+ args:Option<Vec<Ast>>,
+}
+
+#[derive(Debug,PartialEq,Clone)]
 enum TokenType {
  Sep,
  Const,
@@ -11,7 +26,7 @@ enum TokenType {
  CParen,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 struct Token {
  kind:TokenType,
  sval:Option<String>,
@@ -69,11 +84,28 @@ fn lex(code:String)->Vec<Token> {
  return res;
 }
 
-fn parse(tokens:Vec<Token>) {
- for token in tokens {
-  println!("{:?}",token);
+fn parse(tokens:Vec<Token>)->Vec<Ast> {
+ let len=tokens.len();
+ let mut i=0;
+ let mut res=Vec::<Ast>::with_capacity(len);
+ let mut a=Vec::<Token>::with_capacity(len);
+ while i<len {
+  if tokens[i].kind==TokenType::Const {
+   res.push(Ast{kind:AstType::Const,sval:tokens[i].sval.clone(),ival:tokens[i].ival.clone(),callee:None,args:None});
+  } else if tokens[i].kind==TokenType::Name {
+   let name=tokens[i].sval.clone().unwrap();
+   i+=1;
+   while i<len && tokens[i].kind!=TokenType::Sep {
+    a.push(tokens[i].clone());
+    i+=1;
+   }
+   res.push(Ast{kind:AstType::Call,sval:None,ival:None,callee:Some(name.clone()),args:Some(parse(a.clone()))});
+   a.clear();
+  }
+  i+=1;
  }
- return;
+ res.shrink_to_fit();
+ return res;
 }
 
 fn main() {
@@ -85,6 +117,9 @@ fn main() {
  }
  let code=read_to_string(argv[1].clone()).unwrap();
  let tokens=lex(code);
- parse(tokens);
+ let ast=parse(tokens);
+ for i in ast {
+  println!("{:?}",i);
+ }
  return;
 }
