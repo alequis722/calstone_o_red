@@ -13,7 +13,6 @@ struct Ast {
  kind:AstType,
  sval:Option<String>,
  ival:Option<i32>,
- callee:Option<String>,
  args:Option<Vec<Ast>>,
 }
 
@@ -22,9 +21,6 @@ enum TokenType {
  Sep,
  Const,
  Name,
- OParen,
- CParen,
- Comma,
 }
 
 #[derive(Debug,Clone)]
@@ -74,12 +70,6 @@ fn lex(code:String)->Vec<Token> {
   }
   if code.chars().nth(i).unwrap()==';' {
    res.push(Token{kind:TokenType::Sep,sval:None,ival:None});
-  } else if code.chars().nth(i).unwrap()=='(' {
-   res.push(Token{kind:TokenType::OParen,sval:None,ival:None});
-  } else if code.chars().nth(i).unwrap()==')' {
-   res.push(Token{kind:TokenType::CParen,sval:None,ival:None});
-  } else if code.chars().nth(i).unwrap()==',' {
-   res.push(Token{kind:TokenType::Comma,sval:None,ival:None});
   }
   i+=1;
  }
@@ -90,46 +80,23 @@ fn lex(code:String)->Vec<Token> {
 fn parse(tokens:Vec<Token>)->Vec<Ast> {
  let len=tokens.len();
  let mut i=0;
- let mut b=0;
+ //let mut b=0;
  let mut res=Vec::<Ast>::with_capacity(len);
  while i<len {
   if tokens[i].kind==TokenType::Const {
-   res.push(Ast{kind:AstType::Const,sval:tokens[i].sval.clone(),ival:tokens[i].ival.clone(),callee:None,args:None});
+   res.push(Ast{kind:AstType::Const,sval:tokens[i].sval.clone(),ival:tokens[i].ival.clone(),args:None});
   } else if tokens[i].kind==TokenType::Name {
-   if tokens[i+1].kind==TokenType::OParen {
-    let name=tokens[i].sval.clone().unwrap();
-    let mut a=Vec::<Token>::with_capacity(len);
-    i+=2;
-    b+=1;
-    if tokens[i].kind==TokenType::CParen {
-     i+=1;
-     b-=1;
-    }
-    while i<len && b>0 {
-     a.push(tokens[i].clone());
-     i+=1;
-     if tokens[i].kind==TokenType::CParen {
-      i+=1;
-      b-=1;
-     }
-     if b==0 {
-      break;
-     }
-     if tokens[i].kind!=TokenType::Comma {
-      err("Expected a comma");
-     }
-     i+=1;
-    }
-    if tokens[i].kind!=TokenType::Sep {
-     err("Expected a seperator");
-    }
-    if a.len()>0 {
-     res.push(Ast{kind:AstType::Call,sval:None,ival:None,callee:Some(name.clone()),args:Some(parse(a.clone()))});
-    } else {
-     res.push(Ast{kind:AstType::Call,sval:None,ival:None,callee:Some(name.clone()),args:None});
-    }
-    a.clear();
+   let name=tokens[i].sval.clone().unwrap();
+   let mut a=Vec::<Token>::with_capacity(len);
+   i+=1;
+   while i<len && tokens[i].kind!=TokenType::Sep {
+    a.push(tokens[i].clone());
+    i+=1;
    }
+   a.shrink_to_fit();
+   if a.len()>0 { res.push(Ast{kind:AstType::Call,sval:Some(name.clone()),ival:None,args:Some(parse(a.clone()))}); }
+   else { res.push(Ast{kind:AstType::Call,sval:Some(name.clone()),ival:None,args:None}); }
+   a.clear();
   }
   i+=1;
  }
@@ -148,7 +115,7 @@ fn main() {
  let tokens=lex(code);
  let ast=parse(tokens);
  for i in ast {
-  println!("{:?}",i);
+  println!("- - -{:?}",i);
  }
  return;
 }
