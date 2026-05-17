@@ -2,6 +2,24 @@ use std::env::args;
 use std::process::exit;
 use std::fs::read_to_string;
 
+#[derive(Debug,PartialEq)]
+enum Ret {
+ Const(Option<String>,Option<i32>),
+ Name(String),
+ Expr(Vec<Ast>),
+}
+
+impl Ret {
+ fn print(&self) {
+  match self {
+   Ret::Const(Some(s),None)=>print!("{s} "),
+   Ret::Const(None,Some(i))=>print!("{i} "),
+   Ret::Expr(a)=>run(a.to_vec()).print(),
+   _=>(),
+  }
+ }
+}
+
 #[derive(Debug,Clone,PartialEq)]
 enum AstType {
  Const,
@@ -9,7 +27,7 @@ enum AstType {
  Call,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 struct Ast {
  kind:AstType,
  sval:Option<String>,
@@ -126,21 +144,33 @@ fn parse(tokens:Vec<Token>)->Vec<Ast> {
  return res;
 }
 
-fn run(ast:Vec<Ast>) {
+fn run(ast:Vec<Ast>)->Ret {
  let mut i=0;
+ let mut ret=Ret::Const(None,Some(0));
  while i<ast.len() {
-  println!("{:?}",ast[i]);
+  if ast[i].kind==AstType::Const {
+   ret=Ret::Const(ast[i].sval.clone(),ast[i].ival);
+  } else if ast[i].kind==AstType::Expr {
+   ret=Ret::Expr(ast[i].args.clone().unwrap());
+  } else if ast[i].kind==AstType::Call {
+   if ast[i].sval.clone().unwrap()=="print" {
+    for j in ast[i].args.clone().unwrap() {
+     run(vec![j]).print();
+    }
+    println!("");
+   }
+  }
   i+=1;
  }
- return;
+ return ret;
 }
 
 fn main() {
  let argv:Vec<String>=args().collect();
  if argv.len()==1 {
   err("Expected a file");
- } else if !argv[1].ends_with(".mtknfkktr") {
-  err("File has to end with '.mtknfkktr'");
+ } else if !argv[1].ends_with(".swpr") {
+  err("File has to end with '.swpr'");
  }
  let code=read_to_string(argv[1].clone()).unwrap();
  let tokens=lex(code);
