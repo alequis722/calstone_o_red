@@ -169,8 +169,8 @@ fn main() {
  let argv:Vec<String>=args().collect();
  if argv.len()==1 {
   err("Expected a file");
- } else if !argv[1].ends_with(".swpr") {
-  err("File has to end with '.swpr'");
+ } else if !argv[1].ends_with(".cor") {
+  err("File has to end with '.cor'");
  }
  let code=read_to_string(argv[1].clone()).unwrap();
  let tokens=lex(code);
