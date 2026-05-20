@@ -156,12 +156,16 @@ fn run(ast:Vec<Ast>)->Ret {
   } else if ast[i].kind==AstType::Expr {
    ret=Ret::Expr(ast[i].args.clone().unwrap());
   } else if ast[i].kind==AstType::Call {
-   if ast[i].sval.clone().unwrap()=="print" {
+   let name=ast[i].sval.clone().unwrap();
+   if name=="print" {
     for j in ast[i].args.clone().unwrap() {
      run(vec![j]).print();
     }
     println!("");
-   } else if ast[i].sval.clone().unwrap()=="add" {
+   } else if name=="add" {
+    if ast[i].args.clone().unwrap().len()==0 {
+     err("Unexpected atleast 1 argument");
+    }
     let c=ast[i].args.clone().unwrap();
     let d=run(vec![c[0].clone()]);
     let mut a:f32=0.0;
@@ -169,15 +173,20 @@ fn run(ast:Vec<Ast>)->Ret {
      Ret::Const(None,Some(i))=>a=i,
      _=>{ err("Unexpected result"); },
     }
-    for j in 1..c.len() {
-     let b=run(vec![c[j].clone()]);
-     match b {
-      Ret::Const(None,Some(i))=>a+=i,
-      _=>{ err("Unexpected result"); },
+    if c.len()>1 {
+     for j in 1..c.len() {
+      let b=run(vec![c[j].clone()]);
+      match b {
+       Ret::Const(None,Some(i))=>a+=i,
+       _=>{ err("Unexpected result"); },
+      }
      }
     }
     ret=Ret::Const(None,Some(a));
-   } else if ast[i].sval.clone().unwrap()=="sub" {
+   } else if name=="sub" {
+    if ast[i].args.clone().unwrap().len()==0 {
+     err("Unexpected atleast 1 argument");
+    }
     let c=ast[i].args.clone().unwrap();
     let d=run(vec![c[0].clone()]);
     let mut a:f32=0.0;
@@ -185,15 +194,20 @@ fn run(ast:Vec<Ast>)->Ret {
      Ret::Const(None,Some(i))=>a=i,
      _=>{ err("Unexpected result"); },
     }
-    for j in 1..c.len() {
-     let b=run(vec![c[j].clone()]);
-     match b {
-      Ret::Const(None,Some(i))=>a-=i,
-      _=>{ err("Unexpected result"); },
+    if c.len()>1 {
+     for j in 1..c.len() {
+      let b=run(vec![c[j].clone()]);
+      match b {
+       Ret::Const(None,Some(i))=>a-=i,
+       _=>{ err("Unexpected result"); },
+      }
      }
     }
     ret=Ret::Const(None,Some(a));
-   } else if ast[i].sval.clone().unwrap()=="mul" {
+   } else if name=="mul" {
+    if ast[i].args.clone().unwrap().len()==0 {
+     err("Unexpected atleast 1 argument");
+    }
     let c=ast[i].args.clone().unwrap();
     let d=run(vec![c[0].clone()]);
     let mut a:f32=0.0;
@@ -201,15 +215,20 @@ fn run(ast:Vec<Ast>)->Ret {
      Ret::Const(None,Some(i))=>a=i,
      _=>{ err("Unexpected result"); },
     }
-    for j in 1..c.len() {
-     let b=run(vec![c[j].clone()]);
-     match b {
-      Ret::Const(None,Some(i))=>a*=i,
-      _=>{ err("Unexpected result"); },
+    if c.len()>1 {
+     for j in 1..c.len() {
+      let b=run(vec![c[j].clone()]);
+      match b {
+       Ret::Const(None,Some(i))=>a*=i,
+       _=>{ err("Unexpected result"); },
+      }
      }
     }
     ret=Ret::Const(None,Some(a));
-   } else if ast[i].sval.clone().unwrap()=="div" {
+   } else if name=="div" {
+    if ast[i].args.clone().unwrap().len()==0 {
+     err("Unexpected atleast 1 argument");
+    }
     let c=ast[i].args.clone().unwrap();
     let d=run(vec![c[0].clone()]);
     let mut a:f32=0.0;
@@ -217,14 +236,40 @@ fn run(ast:Vec<Ast>)->Ret {
      Ret::Const(None,Some(i))=>a=i,
      _=>{ err("Unexpected result"); },
     }
-    for j in 1..c.len() {
-     let b=run(vec![c[j].clone()]);
-     match b {
-      Ret::Const(None,Some(i))=>a/=i,
-      _=>{ err("Unexpected result"); },
+    if c.len()>1 {
+     for j in 1..c.len() {
+      let b=run(vec![c[j].clone()]);
+      match b {
+       Ret::Const(None,Some(i))=>a/=i,
+       _=>{ err("Unexpected result"); },
+      }
      }
     }
     ret=Ret::Const(None,Some(a));
+   } else if name=="log" {
+    if ast[i].args.clone().unwrap().len()==0 {
+     err("Unexpected atleast 1 argument");
+    }
+    let a=run(vec![ast[i].args.clone().unwrap()[0].clone()]);
+    match a {
+     Ret::Const(None,Some(f))=>ret=Ret::Const(None,Some(f.log10())),
+     _=>{ err("Unexpected result"); },
+    }
+   } else if name=="log_" {
+    if ast[i].args.clone().unwrap().len()<2 {
+     err("Unexpected atleast 1 argument");
+    }
+    let a=run(vec![ast[i].args.clone().unwrap()[0].clone()]);
+    let c=run(vec![ast[i].args.clone().unwrap()[1].clone()]);
+    let mut b:f32=0.0;
+    match c {
+     Ret::Const(None,Some(f))=>b=f,
+     _=>{ err("Unexpected result"); },
+    }
+    match a {
+     Ret::Const(None,Some(f))=>ret=Ret::Const(None,Some(b.log(f))),
+     _=>{ err("Unexpected result"); },
+    }
    }
   }
   i+=1;

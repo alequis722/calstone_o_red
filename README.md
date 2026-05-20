@@ -3,10 +3,12 @@
 Calstone O Red is a lisp-like toy programming language written in rust.
 
 ## Built-in Functions
-| Name | Number of arguments |
+| Name | Minimum number of arguments |
 |:---:|:---|
-| `print` | any |
-| `add` | any |
-| `sub` | any |
-| `mul` | any |
-| `div` | any |
+| `print` | 0 |
+| `add` | 1 |
+| `sub` | 1 |
+| `mul` | 1 |
+| `div` | 1 |
+| `log` | 1 |
+| `log_` | 2 |
