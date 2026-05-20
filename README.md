@@ -11,4 +11,5 @@ Calstone O Red is a lisp-like toy programming language written in rust.
 | `mul` | 1 |
 | `div` | 1 |
 | `log` | 1 |
+| `ln` | 1 |
 | `log_` | 2 |

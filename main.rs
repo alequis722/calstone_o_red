@@ -246,6 +246,15 @@ fn run(ast:Vec<Ast>)->Ret {
      }
     }
     ret=Ret::Const(None,Some(a));
+   } else if name=="ln" {
+    if ast[i].args.clone().unwrap().len()==0 {
+     err("Unexpected atleast 1 argument");
+    }
+    let a=run(vec![ast[i].args.clone().unwrap()[0].clone()]);
+    match a {
+     Ret::Const(None,Some(f))=>ret=Ret::Const(None,Some(f.ln())),
+     _=>{ err("Unexpected result"); },
+    }
    } else if name=="log" {
     if ast[i].args.clone().unwrap().len()==0 {
      err("Unexpected atleast 1 argument");
@@ -270,6 +279,8 @@ fn run(ast:Vec<Ast>)->Ret {
      Ret::Const(None,Some(f))=>ret=Ret::Const(None,Some(b.log(f))),
      _=>{ err("Unexpected result"); },
     }
+   } else {
+    err("Undefined function");
    }
   }
   i+=1;
