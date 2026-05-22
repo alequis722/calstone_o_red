@@ -2,29 +2,15 @@ use std::env::args;
 use std::process::exit;
 use std::fs::read_to_string;
 
-#[derive(Debug,PartialEq)]
-enum Ret {
- Const(Option<String>,Option<f32>),
- Name(String),
- Expr(Vec<Ast>),
-}
-
-impl Ret {
- fn print(&self) {
-  match self {
-   Ret::Const(Some(s),None)=>print!("{s} "),
-   Ret::Const(None,Some(i))=>print!("{i} "),
-   Ret::Expr(a)=>run(a.to_vec()).print(),
-   _=>(),
-  }
- }
-}
-
 #[derive(Debug,Clone,PartialEq)]
 enum AstType {
  Const,
  Expr,
+ Name,
  Call,
+ OParen,
+ CParen,
+ Sep,
 }
 
 #[derive(Debug,Clone,PartialEq)]
@@ -105,41 +91,41 @@ fn lex(code:String)->Vec<Token> {
  return res;
 }
 
-fn parse(tokens:Vec<Token>)->Vec<Ast> {
- let len=tokens.len();
+fn to_ast(tokens:Vec<Token>)->Vec<Ast> {
+ let mut res=Vec::<Ast>::with_capacity(tokens.len());
+ for token in &tokens {
+  match token.kind {
+   TokenType::Const=>res.push(Ast{kind:AstType::Const,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
+   TokenType::Name=>res.push(Ast{kind:AstType::Name,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
+   TokenType::Sep=>res.push(Ast{kind:AstType::Sep,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
+   TokenType::OParen=>res.push(Ast{kind:AstType::OParen,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
+   TokenType::CParen=>res.push(Ast{kind:AstType::CParen,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
+  }
+ }
+ res.shrink_to_fit();
+ return res;
+}
+
+fn parse_paren(ast:&Vec<Ast>)->Vec<Ast> {
+ let mut res=Vec::<Ast>::with_capacity(ast.len());
  let mut i=0;
- let mut res=Vec::<Ast>::with_capacity(len);
- while i<len {
-  if tokens[i].kind==TokenType::Const {
-   res.push(Ast{kind:AstType::Const,sval:tokens[i].sval.clone(),fval:tokens[i].fval.clone(),args:None});
-  } else if tokens[i].kind==TokenType::OParen {
-   let mut a=1;
-   let mut b=Vec::<Token>::with_capacity(len);
+ while i<ast.len() {
+  if ast[i].kind==AstType::OParen {
+   let mut c=1;
+   let mut a=Vec::<Ast>::with_capacity(ast.len());
    i+=1;
-   while i<len {
-    if tokens[i].kind==TokenType::OParen { a+=1; }
-    else if tokens[i].kind==TokenType::CParen { a-=1; }
-    if a==0 { break; }
-    b.push(tokens[i].clone());
-    i+=1;
-   }
-   b.shrink_to_fit();
-   if b.len()>0 {
-    res.push(Ast{kind:AstType::Expr,sval:None,fval:None,args:Some(parse(b.clone()))});
-   }
-   b.clear();
-  } else if tokens[i].kind==TokenType::Name {
-   let name=tokens[i].sval.clone().unwrap();
-   let mut a=Vec::<Token>::with_capacity(len);
-   i+=1;
-   while i<len && tokens[i].kind!=TokenType::Sep {
-    a.push(tokens[i].clone());
+   while i<ast.len() {
+    if ast[i].kind==AstType::OParen { c+=1; }
+    else if ast[i].kind==AstType::CParen { c-=1; }
+    if c==0 { break; }
+    a.push(ast[i].clone());
     i+=1;
    }
    a.shrink_to_fit();
-   if a.len()>0 { res.push(Ast{kind:AstType::Call,sval:Some(name.clone()),fval:None,args:Some(parse(a.clone()))}); }
-   else { res.push(Ast{kind:AstType::Call,sval:Some(name.clone()),fval:None,args:None}); }
+   res.push(Ast{kind:AstType::Expr,sval:None,fval:None,args:Some(parse_from_ast(&a))});
    a.clear();
+  } else {
+   res.push(ast[i].clone());
   }
   i+=1;
  }
@@ -147,145 +133,40 @@ fn parse(tokens:Vec<Token>)->Vec<Ast> {
  return res;
 }
 
-fn run(ast:Vec<Ast>)->Ret {
+fn parse_func(ast:&Vec<Ast>)->Vec<Ast> {
+ let mut res=Vec::<Ast>::with_capacity(ast.len());
  let mut i=0;
- let mut ret=Ret::Const(None,Some(0.0));
  while i<ast.len() {
-  if ast[i].kind==AstType::Const {
-   ret=Ret::Const(ast[i].sval.clone(),ast[i].fval);
-  } else if ast[i].kind==AstType::Expr {
-   ret=Ret::Expr(ast[i].args.clone().unwrap());
-  } else if ast[i].kind==AstType::Call {
+  if ast[i].kind==AstType::Name {
    let name=ast[i].sval.clone().unwrap();
-   if name=="print" {
-    for j in ast[i].args.clone().unwrap() {
-     run(vec![j]).print();
-    }
-    println!("");
-   } else if name=="add" {
-    if ast[i].args.clone().unwrap().len()==0 {
-     err("Unexpected atleast 1 argument");
-    }
-    let c=ast[i].args.clone().unwrap();
-    let d=run(vec![c[0].clone()]);
-    let mut a:f32=0.0;
-    match d {
-     Ret::Const(None,Some(i))=>a=i,
-     _=>{ err("Unexpected result"); },
-    }
-    if c.len()>1 {
-     for j in 1..c.len() {
-      let b=run(vec![c[j].clone()]);
-      match b {
-       Ret::Const(None,Some(i))=>a+=i,
-       _=>{ err("Unexpected result"); },
-      }
-     }
-    }
-    ret=Ret::Const(None,Some(a));
-   } else if name=="sub" {
-    if ast[i].args.clone().unwrap().len()==0 {
-     err("Unexpected atleast 1 argument");
-    }
-    let c=ast[i].args.clone().unwrap();
-    let d=run(vec![c[0].clone()]);
-    let mut a:f32=0.0;
-    match d {
-     Ret::Const(None,Some(i))=>a=i,
-     _=>{ err("Unexpected result"); },
-    }
-    if c.len()>1 {
-     for j in 1..c.len() {
-      let b=run(vec![c[j].clone()]);
-      match b {
-       Ret::Const(None,Some(i))=>a-=i,
-       _=>{ err("Unexpected result"); },
-      }
-     }
-    }
-    ret=Ret::Const(None,Some(a));
-   } else if name=="mul" {
-    if ast[i].args.clone().unwrap().len()==0 {
-     err("Unexpected atleast 1 argument");
-    }
-    let c=ast[i].args.clone().unwrap();
-    let d=run(vec![c[0].clone()]);
-    let mut a:f32=0.0;
-    match d {
-     Ret::Const(None,Some(i))=>a=i,
-     _=>{ err("Unexpected result"); },
-    }
-    if c.len()>1 {
-     for j in 1..c.len() {
-      let b=run(vec![c[j].clone()]);
-      match b {
-       Ret::Const(None,Some(i))=>a*=i,
-       _=>{ err("Unexpected result"); },
-      }
-     }
-    }
-    ret=Ret::Const(None,Some(a));
-   } else if name=="div" {
-    if ast[i].args.clone().unwrap().len()==0 {
-     err("Unexpected atleast 1 argument");
-    }
-    let c=ast[i].args.clone().unwrap();
-    let d=run(vec![c[0].clone()]);
-    let mut a:f32=0.0;
-    match d {
-     Ret::Const(None,Some(i))=>a=i,
-     _=>{ err("Unexpected result"); },
-    }
-    if c.len()>1 {
-     for j in 1..c.len() {
-      let b=run(vec![c[j].clone()]);
-      match b {
-       Ret::Const(None,Some(i))=>a/=i,
-       _=>{ err("Unexpected result"); },
-      }
-     }
-    }
-    ret=Ret::Const(None,Some(a));
-   } else if name=="ln" {
-    if ast[i].args.clone().unwrap().len()==0 {
-     err("Unexpected atleast 1 argument");
-    }
-    let a=run(vec![ast[i].args.clone().unwrap()[0].clone()]);
-    match a {
-     Ret::Const(None,Some(f))=>ret=Ret::Const(None,Some(f.ln())),
-     _=>{ err("Unexpected result"); },
-    }
-   } else if name=="log" {
-    if ast[i].args.clone().unwrap().len()==0 {
-     err("Unexpected atleast 1 argument");
-    }
-    let a=run(vec![ast[i].args.clone().unwrap()[0].clone()]);
-    match a {
-     Ret::Const(None,Some(f))=>ret=Ret::Const(None,Some(f.log10())),
-     _=>{ err("Unexpected result"); },
-    }
-   } else if name=="log_" {
-    if ast[i].args.clone().unwrap().len()<2 {
-     err("Unexpected atleast 1 argument");
-    }
-    let a=run(vec![ast[i].args.clone().unwrap()[0].clone()]);
-    let c=run(vec![ast[i].args.clone().unwrap()[1].clone()]);
-    let mut b:f32=0.0;
-    match c {
-     Ret::Const(None,Some(f))=>b=f,
-     _=>{ err("Unexpected result"); },
-    }
-    match a {
-     Ret::Const(None,Some(f))=>ret=Ret::Const(None,Some(b.log(f))),
-     _=>{ err("Unexpected result"); },
-    }
-   } else {
-    err("Undefined function");
+   let mut a=Vec::<Ast>::with_capacity(ast.len());
+   i+=1;
+   while i<ast.len() && ast[i].kind!=AstType::Sep {
+    a.push(ast[i].clone());
+    i+=1
    }
+   a.shrink_to_fit();
+   res.push(Ast{kind:AstType::Call,sval:Some(name),fval:None,args:Some(a.clone())});
+  } else {
+   res.push(ast[i].clone());
   }
   i+=1;
  }
- return ret;
+ return res;
+}
+
+fn parse_from_ast(ast:&Vec<Ast>)->Vec<Ast> {
+ let mut res:Vec<Ast>;
+ res=parse_paren(ast);
+ res=parse_func(&res);
+ return res;
+}
+
+fn parse_from_token(tokens:Vec<Token>)->Vec<Ast> {
+ let mut res:Vec<Ast>;
+ res=to_ast(tokens);
+ res=parse_from_ast(&res);
+ return res;
 }
 
 fn main() {
@@ -297,7 +178,7 @@ fn main() {
  }
  let code=read_to_string(argv[1].clone()).unwrap();
  let tokens=lex(code);
- let ast=parse(tokens);
- run(ast);
+ let ast=parse_from_token(tokens);
+ println!("{:?}",ast);
  return;
 }
