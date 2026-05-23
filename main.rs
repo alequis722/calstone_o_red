@@ -189,6 +189,8 @@ fn run(ast:&Vec<Ast>)->Ret {
  while i<ast.len() {
   if ast[i].kind==AstType::Const {
    res=Ret::Const(ast[i].sval.clone(),ast[i].fval.clone());
+  } else if ast[i].kind==AstType::Expr {
+   res=run(&ast[i].args.clone().unwrap());
   } else if ast[i].kind==AstType::Call {
    let name=ast[i].sval.clone().unwrap();
    let args=ast[i].args.clone().unwrap();
@@ -197,6 +199,78 @@ fn run(ast:&Vec<Ast>)->Ret {
      run(&vec![j]).print();
     }
     println!();
+   } else if name=="add" {
+    if args.len()<2 {
+     err("Expected 2 arguments");
+    }
+    let a=run(&vec![args[0].clone()]);
+    let mut b:f32=0.0;
+    match a {
+     Ret::Const(None,Some(f))=>b=f,
+     _=>{ err("Unexpected type"); },
+    }
+    for j in 1..args.len() {
+     let c=run(&vec![args[j].clone()]);
+     match c {
+      Ret::Const(None,Some(f))=>b+=f,
+      _=>{ err("Unexpected type"); },
+     }
+    }
+    res=Ret::Const(None,Some(b));
+   } else if name=="sub" {
+    if args.len()<2 {
+     err("Expected 2 arguments");
+    }
+    let a=run(&vec![args[0].clone()]);
+    let mut b:f32=0.0;
+    match a {
+     Ret::Const(None,Some(f))=>b=f,
+     _=>{ err("Unexpected type"); },
+    }
+    for j in 1..args.len() {
+     let c=run(&vec![args[j].clone()]);
+     match c {
+      Ret::Const(None,Some(f))=>b-=f,
+      _=>{ err("Unexpected type"); },
+     }
+    }
+    res=Ret::Const(None,Some(b));
+   } else if name=="mul" {
+    if args.len()<2 {
+     err("Expected 2 arguments");
+    }
+    let a=run(&vec![args[0].clone()]);
+    let mut b:f32=0.0;
+    match a {
+     Ret::Const(None,Some(f))=>b=f,
+     _=>{ err("Unexpected type"); },
+    }
+    for j in 1..args.len() {
+     let c=run(&vec![args[j].clone()]);
+     match c {
+      Ret::Const(None,Some(f))=>b*=f,
+      _=>{ err("Unexpected type"); },
+     }
+    }
+    res=Ret::Const(None,Some(b));
+   } else if name=="div" {
+    if args.len()<2 {
+     err("Expected 2 arguments");
+    }
+    let a=run(&vec![args[0].clone()]);
+    let mut b:f32=0.0;
+    match a {
+     Ret::Const(None,Some(f))=>b=f,
+     _=>{ err("Unexpected type"); },
+    }
+    for j in 1..args.len() {
+     let c=run(&vec![args[j].clone()]);
+     match c {
+      Ret::Const(None,Some(f))=>b/=f,
+      _=>{ err("Unexpected type"); },
+     }
+    }
+    res=Ret::Const(None,Some(b));
    } else {
     err("Undefined function");
    }
