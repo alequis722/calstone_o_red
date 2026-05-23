@@ -2,6 +2,20 @@ use std::env::args;
 use std::process::exit;
 use std::fs::read_to_string;
 
+enum Ret {
+ Const(Option<String>,Option<f32>),
+}
+
+impl Ret {
+ fn print(&self) {
+  match self {
+   Ret::Const(Some(s),None)=>print!("{} ",s),
+   Ret::Const(None,Some(f))=>print!("{} ",f),
+   _=>{ err("Undefined result"); },
+  }
+ }
+}
+
 #[derive(Debug,Clone,PartialEq)]
 enum AstType {
  Const,
@@ -169,6 +183,29 @@ fn parse_from_token(tokens:Vec<Token>)->Vec<Ast> {
  return res;
 }
 
+fn run(ast:&Vec<Ast>)->Ret {
+ let mut res=Ret::Const(None,Some(0.0));
+ let mut i=0;
+ while i<ast.len() {
+  if ast[i].kind==AstType::Const {
+   res=Ret::Const(ast[i].sval.clone(),ast[i].fval.clone());
+  } else if ast[i].kind==AstType::Call {
+   let name=ast[i].sval.clone().unwrap();
+   let args=ast[i].args.clone().unwrap();
+   if name=="print" {
+    for j in args {
+     run(&vec![j]).print();
+    }
+    println!();
+   } else {
+    err("Undefined function");
+   }
+  }
+  i+=1;
+ }
+ return res;
+}
+
 fn main() {
  let argv:Vec<String>=args().collect();
  if argv.len()==1 {
@@ -179,6 +216,6 @@ fn main() {
  let code=read_to_string(argv[1].clone()).unwrap();
  let tokens=lex(code);
  let ast=parse_from_token(tokens);
- println!("{:?}",ast);
+ run(&ast);
  return;
 }
