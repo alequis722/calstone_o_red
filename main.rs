@@ -31,6 +31,7 @@ enum AstType {
  Expr,
  Name,
  Call,
+ Arg,
  OParen,
  CParen,
  Sep,
@@ -147,9 +148,10 @@ fn to_ast(tokens:Vec<Token>)->Vec<Ast> {
   match token.kind {
    TokenType::Const=>res.push(Ast{kind:AstType::Const,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
    TokenType::Name=>res.push(Ast{kind:AstType::Name,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
-   TokenType::Sep=>res.push(Ast{kind:AstType::Sep,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
-   TokenType::OParen=>res.push(Ast{kind:AstType::OParen,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
-   TokenType::CParen=>res.push(Ast{kind:AstType::CParen,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
+   TokenType::Sep=>res.push(Ast{kind:AstType::Sep,sval:None,fval:None,args:None}),
+   TokenType::OParen=>res.push(Ast{kind:AstType::OParen,sval:None,fval:None,args:None}),
+   TokenType::CParen=>res.push(Ast{kind:AstType::CParen,sval:None,fval:None,args:None}),
+   TokenType::Arg=>res.push(Ast{kind:AstType::Arg,sval:None,fval:token.fval.clone(),args:None}),
    _=>{ panic!("Unexpected token"); }
   }
  }
@@ -361,6 +363,10 @@ fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
     res=Ret::Name(vname.clone());
    } else {
     panic!("Undefined function '{}'",name);
+   }
+  } else if ast[i].kind==AstType::Arg {
+   if !in_fn {
+    panic!("Argument index outside of function");
    }
   }
   i+=1;
