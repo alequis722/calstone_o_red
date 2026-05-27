@@ -224,14 +224,14 @@ fn parse_from_token(tokens:Vec<Token>)->Vec<Ast> {
  return res;
 }
 
-fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
+fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,fun:&mut HashMap<String,(f32,Ast)>,in_fn:bool)->Ret {
  let mut res=Ret::Const(None,Some(0.0));
  let mut i=0;
  while i<ast.len() {
   if ast[i].kind==AstType::Const {
    res=Ret::Const(ast[i].sval.clone(),ast[i].fval.clone());
   } else if ast[i].kind==AstType::Expr {
-   res=run(&ast[i].args.clone().unwrap(),var,false);
+   res=run(&ast[i].args.clone().unwrap(),var,fun,false);
   } else if ast[i].kind==AstType::Name {
    match var.get(&ast[i].sval.clone().unwrap()) {
     Some(r)=>res=r.clone(),
@@ -242,21 +242,21 @@ fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
    let args=ast[i].args.clone().unwrap();
    if name=="print" {
     for j in args {
-     run(&vec![j],var,false).print(var);
+     run(&vec![j],var,fun,false).print(var);
     }
     println!();
    } else if name=="add" {
     if args.len()<2 {
      panic!("Expected 2 arguments");
     }
-    let a=run(&vec![args[0].clone()],var,false);
+    let a=run(&vec![args[0].clone()],var,fun,false);
     let mut b:f32;
     match a {
      Ret::Const(None,Some(f))=>b=f,
      _=>{ panic!("Unexpected type"); },
     }
     for j in 1..args.len() {
-     let c=run(&vec![args[j].clone()],var,false);
+     let c=run(&vec![args[j].clone()],var,fun,false);
      match c {
       Ret::Const(None,Some(f))=>b+=f,
       _=>{ panic!("Unexpected type"); },
@@ -267,14 +267,14 @@ fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
     if args.len()<2 {
      panic!("Expected 2 arguments");
     }
-    let a=run(&vec![args[0].clone()],var,false);
+    let a=run(&vec![args[0].clone()],var,fun,false);
     let mut b:f32;
     match a {
      Ret::Const(None,Some(f))=>b=f,
      _=>{ panic!("Unexpected type"); },
     }
     for j in 1..args.len() {
-     let c=run(&vec![args[j].clone()],var,false);
+     let c=run(&vec![args[j].clone()],var,fun,false);
      match c {
       Ret::Const(None,Some(f))=>b-=f,
       _=>{ panic!("Unexpected type"); },
@@ -285,14 +285,14 @@ fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
     if args.len()<2 {
      panic!("Expected 2 arguments");
     }
-    let a=run(&vec![args[0].clone()],var,false);
+    let a=run(&vec![args[0].clone()],var,fun,false);
     let mut b:f32;
     match a {
      Ret::Const(None,Some(f))=>b=f,
      _=>{ panic!("Unexpected type"); },
     }
     for j in 1..args.len() {
-     let c=run(&vec![args[j].clone()],var,false);
+     let c=run(&vec![args[j].clone()],var,fun,false);
      match c {
       Ret::Const(None,Some(f))=>b*=f,
       _=>{ panic!("Unexpected type"); },
@@ -303,14 +303,14 @@ fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
     if args.len()<2 {
      panic!("Expected 2 arguments");
     }
-    let a=run(&vec![args[0].clone()],var,false);
+    let a=run(&vec![args[0].clone()],var,fun,false);
     let mut b:f32;
     match a {
      Ret::Const(None,Some(f))=>b=f,
      _=>{ panic!("Unexpected type"); },
     }
     for j in 1..args.len() {
-     let c=run(&vec![args[j].clone()],var,false);
+     let c=run(&vec![args[j].clone()],var,fun,false);
      match c {
       Ret::Const(None,Some(f))=>b/=f,
       _=>{ panic!("Unexpected type"); },
@@ -321,7 +321,7 @@ fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
     if args.len()!=1 {
      panic!("Expected 1 argument, got {}",args.len());
     }
-    let a=run(&vec![args[0].clone()],var,false);
+    let a=run(&vec![args[0].clone()],var,fun,false);
     match a {
      Ret::Const(None,Some(f))=>res=Ret::Const(None,Some(f.ln())),
      _=>{ panic!("Unexpected type"); },
@@ -330,7 +330,7 @@ fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
     if args.len()!=1 {
      panic!("Expected 1 argument, got {}",args.len());
     }
-    let a=run(&vec![args[0].clone()],var,false);
+    let a=run(&vec![args[0].clone()],var,fun,false);
     match a {
      Ret::Const(None,Some(f))=>res=Ret::Const(None,Some(f.log10())),
      _=>{ panic!("Unexpected type"); },
@@ -339,30 +339,48 @@ fn run(ast:&Vec<Ast>,var:&mut HashMap<String,Ret>,in_fn:bool)->Ret {
     if args.len()!=2 {
      panic!("Expected 2 arguments, got {}",args.len());
     }
-    let a=run(&vec![args[0].clone()],var,false);
+    let a=run(&vec![args[0].clone()],var,fun,false);
     let b:f32;
     match a {
      Ret::Const(None,Some(f))=>b=f,
      _=>{ panic!("Unexpected type"); },
     }
-    match run(&vec![args[1].clone()],var,false) {
+    match run(&vec![args[1].clone()],var,fun,false) {
      Ret::Const(None,Some(f))=>res=Ret::Const(None,Some(f.log(b))),
      _=>{ panic!("Unexpected type"); },
     }
    } else if name=="let" {
     if args.len()!=2 {
      panic!("Expected 2 arguments");
-    }
-    if args[0].kind.clone()!=AstType::Name {
+    } else if args[0].kind!=AstType::Name {
      panic!("Expected a name");
     }
     let mut vname=args[0].sval.clone().unwrap();
     vname.shrink_to_fit();
-    let a=run(&vec![args[1].clone()],var,false);
+    let a:Ret=run(&vec![args[1].clone()],var,fun,false);
     var.insert(vname.clone(),a);
     res=Ret::Name(vname.clone());
+   } else if name=="def" {
+    if args.len()!=3 {
+     panic!("Expected 3 arguments");
+    } else if args[0].kind!=AstType::Name {
+     panic!("Expected a name");
+    } else if args[1].kind!=AstType::Const || args[1].fval.is_none() {
+     panic!("Expected a number");
+    }
+    let a=args[0].sval.clone().unwrap();
+    let b=args[1].fval.clone().unwrap();
+    fun.insert(a,(b,args[2].clone()));
    } else {
-    panic!("Undefined function '{}'",name);
+    match fun.get(&name) {
+     Some((a,b))=>{
+      if args.len()!=(*a as usize) {
+       panic!("Function '{}' expected '{}' argument(s)",name,a);
+      }
+      panic!("Unimplemented");
+     },
+     _=>{ panic!("Undefined function '{}'",name); },
+    }
    }
   } else if ast[i].kind==AstType::Arg {
    if !in_fn {
@@ -391,6 +409,7 @@ fn main() {
  let tokens=lex(code);
  let ast=parse_from_token(tokens);
  let mut var=HashMap::<String,Ret>::new();
- run(&ast,&mut var,false);
+ let mut fun=HashMap::<String,(f32,Ast)>::new();
+ run(&ast,&mut var,&mut fun,false);
  return;
 }
