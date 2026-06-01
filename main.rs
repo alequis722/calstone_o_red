@@ -35,6 +35,7 @@ enum AstType {
  Const,
  Expr,
  Name,
+ Arg,
  Call,
  OParen,
  CParen,
@@ -53,6 +54,7 @@ struct Ast {
 enum TokenType {
  Sep,
  Const,
+ Arg,
  Name,
  OParen,
  CParen,
@@ -118,6 +120,17 @@ fn lex(code:String)->Vec<Token> {
      i+=1;
     }
    }
+  } else if code.chars().nth(i).unwrap()=='$' {
+   i+=1;
+   while i<len && code.chars().nth(i).unwrap().is_ascii_digit() {
+    word.push(code.chars().nth(i).unwrap());
+    i+=1;
+   }
+   if word.len()==0 {
+    panic!("Expected a number");
+   }
+   res.push(Token{kind:TokenType::Arg,sval:Some(word.clone()),fval:None});
+   word.clear();
   }
   if i<len {
    if code.chars().nth(i).unwrap()==';' {
@@ -139,10 +152,11 @@ fn to_ast(tokens:Vec<Token>)->Vec<Ast> {
  for token in &tokens {
   match token.kind {
    TokenType::Const=>res.push(Ast{kind:AstType::Const,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
-   TokenType::Name=>res.push(Ast{kind:AstType::Name,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
-   TokenType::Sep=>res.push(Ast{kind:AstType::Sep,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
-   TokenType::OParen=>res.push(Ast{kind:AstType::OParen,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
-   TokenType::CParen=>res.push(Ast{kind:AstType::CParen,sval:token.sval.clone(),fval:token.fval.clone(),args:None}),
+   TokenType::Name=>res.push(Ast{kind:AstType::Name,sval:token.sval.clone(),fval:None,args:None}),
+   TokenType::Sep=>res.push(Ast{kind:AstType::Sep,sval:None,fval:None,args:None}),
+   TokenType::OParen=>res.push(Ast{kind:AstType::OParen,sval:None,fval:None,args:None}),
+   TokenType::CParen=>res.push(Ast{kind:AstType::CParen,sval:None,fval:None,args:None}),
+   TokenType::Arg=>res.push(Ast{kind:AstType::Arg,sval:token.sval.clone(),fval:None,args:None}),
   }
  }
  res.shrink_to_fit();
@@ -232,6 +246,15 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ret>>,fun:&mut Vec<HashMap<Stri
      res=run(&vec![ast[i].clone()],var,fun,scope-1);
     }
    }
+  } else if ast[i].kind==AstType::Arg {
+   if scope==0 {
+    panic!("Unexpected argument index");
+   }
+   let a=var[scope].get(&ast[i].sval.clone().unwrap());
+   if a.is_none() {
+    panic!("Undefined variable '${}'",ast[i].sval.clone().unwrap());
+   }
+   res=a.unwrap().clone();
   } else if ast[i].kind==AstType::Call {
    let name=ast[i].sval.clone().unwrap();
    let args=ast[i].args.clone().unwrap();
