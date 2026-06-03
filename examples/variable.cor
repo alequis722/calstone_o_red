@@ -1,4 +1,0 @@
-let a (add 1 2);
-let b (add a 2);
-print a;
-print b;

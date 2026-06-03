@@ -89,6 +89,18 @@ fn lex(code:String)->Vec<Token> {
    }
    res.push(Token{kind:TokenType::Const,sval:None,fval:Some(word.parse::<f32>().unwrap())});
    word.clear();
+  } else if code.chars().nth(i).unwrap()=='-' {
+   let mut c=0;
+   word.push(code.chars().nth(i).unwrap());
+   i+=1;
+   while i<len && (code.chars().nth(i).unwrap().is_ascii_digit() || code.chars().nth(i).unwrap()=='.') {
+    if code.chars().nth(i).unwrap()=='.' { c+=1; }
+    if c>1 { panic!("Unexpected period in number"); }
+    word.push(code.chars().nth(i).unwrap());
+    i+=1;
+   }
+   res.push(Token{kind:TokenType::Const,sval:None,fval:Some(word.parse::<f32>().unwrap())});
+   word.clear();
   } else if code.chars().nth(i).unwrap()=='"' {
    i+=1;
    c+=1;
@@ -374,6 +386,9 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
      vname=args[0].sval.clone().unwrap();
      vname.shrink_to_fit();
      let argc=args[1].fval.clone().unwrap();
+     if argc<=0.0 {
+      panic!("Unexpected a non-zero value");
+     }
      fun[scope].insert(vname.clone(),(argc as i32,args[2].clone()));
     } else {
      panic!("Expected 2 or 3 arguments");
