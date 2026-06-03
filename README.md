@@ -6,7 +6,7 @@ Calstone O Red is a lisp-like toy programming language written in rust.
 | Name | Usage |
 |:---:|:---|
 | `print` | Prints to terminal |
-| `let` | Defines a variable |
+| `let` | Defines a variable or a function<br>depending on the number of argument |
 | `add` | Adds numbers |
 | `sub` | Subtracts numbers |
 | `mul` | Multiplies numbers |

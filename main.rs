@@ -10,18 +10,18 @@ enum Ret {
 }
 
 impl Ret {
- fn print(&self,var:&Vec<HashMap<String,Ret>>,scope:usize) {
+ fn print(&self,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<String,(i32,Ast)>>,scope:usize) {
   match self {
    Ret::Const(Some(s),None)=>print!("{} ",s),
    Ret::Const(None,Some(f))=>print!("{} ",f),
    Ret::Name(s)=>{
     match var[scope].get(s) {
-     Some(v)=> v.print(var,scope),
+     Some(v)=> run(&vec![v.clone()],var,fun,scope).print(var,fun,scope),
      _=>{
       if scope==0 {
        panic!("Undefined variable '{}'",s);
       }
-      self.print(var,scope-1);
+      self.print(var,fun,scope-1);
      },
     }
    },
@@ -35,7 +35,6 @@ enum AstType {
  Const,
  Expr,
  Name,
- Arg,
  Call,
  OParen,
  CParen,
@@ -54,7 +53,6 @@ struct Ast {
 enum TokenType {
  Sep,
  Const,
- Arg,
  Name,
  OParen,
  CParen,
@@ -129,7 +127,7 @@ fn lex(code:String)->Vec<Token> {
    if word.len()==0 {
     panic!("Expected a number");
    }
-   res.push(Token{kind:TokenType::Arg,sval:Some(word.clone()),fval:None});
+   res.push(Token{kind:TokenType::Name,sval:Some(word.clone()),fval:None});
    word.clear();
   }
   if i<len {
@@ -156,7 +154,6 @@ fn to_ast(tokens:Vec<Token>)->Vec<Ast> {
    TokenType::Sep=>res.push(Ast{kind:AstType::Sep,sval:None,fval:None,args:None}),
    TokenType::OParen=>res.push(Ast{kind:AstType::OParen,sval:None,fval:None,args:None}),
    TokenType::CParen=>res.push(Ast{kind:AstType::CParen,sval:None,fval:None,args:None}),
-   TokenType::Arg=>res.push(Ast{kind:AstType::Arg,sval:token.sval.clone(),fval:None,args:None}),
   }
  }
  res.shrink_to_fit();
@@ -228,7 +225,7 @@ fn parse_from_token(tokens:Vec<Token>)->Vec<Ast> {
  return res;
 }
 
-fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ret>>,fun:&mut Vec<HashMap<String,(i32,Ast)>>,scope:usize)->Ret {
+fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<String,(i32,Ast)>>,scope:usize)->Ret {
  let mut res=Ret::Const(None,Some(0.0));
  let mut i=0;
  while i<ast.len() {
@@ -238,7 +235,7 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ret>>,fun:&mut Vec<HashMap<Stri
    res=run(&ast[i].args.clone().unwrap(),var,fun,scope);
   } else if ast[i].kind==AstType::Name {
    match var[scope].get(&ast[i].sval.clone().unwrap()) {
-    Some(r)=>{ res=r.clone(); break; },
+    Some(r)=>{ res=run(&vec![r.clone()],var,fun,scope); break; },
     _=>{
      if scope==0 {
       panic!("Undefined variable '{}'",ast[i].sval.clone().unwrap());
@@ -246,21 +243,12 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ret>>,fun:&mut Vec<HashMap<Stri
      res=run(&vec![ast[i].clone()],var,fun,scope-1);
     }
    }
-  } else if ast[i].kind==AstType::Arg {
-   if scope==0 {
-    panic!("Unexpected argument index");
-   }
-   let a=var[scope].get(&ast[i].sval.clone().unwrap());
-   if a.is_none() {
-    panic!("Undefined variable '${}'",ast[i].sval.clone().unwrap());
-   }
-   res=a.unwrap().clone();
   } else if ast[i].kind==AstType::Call {
    let name=ast[i].sval.clone().unwrap();
    let args=ast[i].args.clone().unwrap();
    if name=="print" {
     for j in args {
-     run(&vec![j],var,fun,scope).print(var,scope);
+     run(&vec![j],var,fun,scope).print(var,fun,scope);
     }
     println!();
    } else if name=="add" {
@@ -375,7 +363,7 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ret>>,fun:&mut Vec<HashMap<Stri
      }
      vname=args[0].sval.clone().unwrap();
      vname.shrink_to_fit();
-     let a=run(&vec![args[1].clone()],var,fun,scope);
+     let a=args[1].clone();
      var[scope].insert(vname.clone(),a);
     } else if args.len()==3 {
      if args[0].kind.clone()!=AstType::Name {
@@ -392,7 +380,25 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ret>>,fun:&mut Vec<HashMap<Stri
     }
     res=Ret::Name(vname.clone());
    } else {
-    panic!("Unimplemented feature");
+    if fun[scope].get(&name).is_none() {
+     if scope==0 {
+      panic!("Undefined function '{}'",name);
+     }
+     res=run(&vec![ast[i].clone()],var,fun,scope-1);
+    } else {
+     var.push(HashMap::<String,Ast>::new());
+     fun.push(HashMap::<String,(i32,Ast)>::new());
+     let body=fun[scope].get(&name).unwrap();
+     if args.len()!=body.0 as usize {
+      panic!("Expected {} arguments, got {}",body.0,args.len());
+     }
+     for j in 0..body.0 {
+      var[scope+1].insert(j.to_string(),args[j as usize].clone());
+     }
+     res=run(&vec![body.1.clone()],var,fun,scope+1);
+     var.pop();
+     fun.pop();
+    }
    }
   }
   i+=1;
@@ -416,8 +422,8 @@ fn main() {
  let code=read_to_string(argv[1].clone()).unwrap();
  let tokens=lex(code);
  let ast=parse_from_token(tokens);
- let mut var=Vec::<HashMap<String,Ret>>::with_capacity(8);
- var.push(HashMap::<String,Ret>::new());
+ let mut var=Vec::<HashMap<String,Ast>>::with_capacity(8);
+ var.push(HashMap::<String,Ast>::new());
  let mut fun=Vec::<HashMap<String,(i32,Ast)>>::with_capacity(8);
  fun.push(HashMap::<String,(i32,Ast)>::new());
  run(&ast,&mut var,&mut fun,0);
