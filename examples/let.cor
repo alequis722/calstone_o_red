@@ -1,1 +1,11 @@
-let
+# defines a variable
+let a (print "Called 'a'");
+# you can call a variable
+a;
+
+# defines a function
+let b 1 (print $0);
+b "Called b";
+
+# defines an invalid function
+let c 0 (print "Hello World");

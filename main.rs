@@ -260,7 +260,8 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
    let args=ast[i].args.clone().unwrap();
    if name=="print" {
     for j in args {
-     run(&vec![j],var,fun,scope).print(var,fun,scope);
+     res=run(&vec![j],var,fun,scope);
+     res.print(var,fun,scope);
     }
     println!();
    } else if name=="add" {
@@ -385,21 +386,25 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
      }
      vname=args[0].sval.clone().unwrap();
      vname.shrink_to_fit();
-     let argc=args[1].fval.clone().unwrap();
-     if argc<=0.0 {
-      panic!("Unexpected a non-zero value");
+     let argc=args[1].fval.clone().unwrap() as i32;
+     if argc<=0 {
+      panic!("Expected a non-zero value");
      }
-     fun[scope].insert(vname.clone(),(argc as i32,args[2].clone()));
+     fun[scope].insert(vname.clone(),(argc,args[2].clone()));
     } else {
      panic!("Expected 2 or 3 arguments");
     }
     res=Ret::Name(vname.clone());
    } else {
     if fun[scope].get(&name).is_none() {
-     if scope==0 {
-      panic!("Undefined function '{}'",name);
+     if var[scope].get(&name).is_none() {
+      if scope==0 {
+       panic!("Undefined function '{}'",name);
+      }
+      res=run(&vec![ast[i].clone()],var,fun,scope-1);
+     } else {
+      res=run(&vec![var[scope].get(&name).unwrap().clone()],var,fun,scope);
      }
-     res=run(&vec![ast[i].clone()],var,fun,scope-1);
     } else {
      var.push(HashMap::<String,Ast>::new());
      fun.push(HashMap::<String,(i32,Ast)>::new());
