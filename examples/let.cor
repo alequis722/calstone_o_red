@@ -7,5 +7,6 @@ a;
 let b 1 (print $0);
 b "Called b";
 
-# defines an invalid function
-let c 0 (print "Hello World");
+# invalid functions
+let c 0 (print "Called c");
+let d 1.5 (print "Called d");

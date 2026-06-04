@@ -386,11 +386,14 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
      }
      vname=args[0].sval.clone().unwrap();
      vname.shrink_to_fit();
-     let argc=args[1].fval.clone().unwrap() as i32;
-     if argc<=0 {
-      panic!("Expected a non-zero value");
+     let argc=args[1].fval.clone().unwrap();
+     if argc.fract()>0.0 {
+      panic!("Expected a whole number, got {}",argc);
      }
-     fun[scope].insert(vname.clone(),(argc,args[2].clone()));
+     if argc<=0.0 {
+      panic!("Expected a positive non-zero value");
+     }
+     fun[scope].insert(vname.clone(),(argc as i32,args[2].clone()));
     } else {
      panic!("Expected 2 or 3 arguments");
     }
