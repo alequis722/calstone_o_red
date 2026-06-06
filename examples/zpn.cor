@@ -1,0 +1,4 @@
+let a (sub 1 2); # a=-1
+print (zero a); # prints 0 (false)
+print (pos a); # also prints 0
+print (neg a); # prints 1

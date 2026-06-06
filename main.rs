@@ -3,28 +3,16 @@ use std::fs::read_to_string;
 use std::path::Path;
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone,PartialEq)]
 enum Ret {
  Const(Option<String>,Option<f32>),
- Name(String),
 }
 
 impl Ret {
- fn print(&self,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<String,(i32,Ast)>>,scope:usize) {
+ fn print(&self) {
   match self {
    Ret::Const(Some(s),None)=>print!("{} ",s),
    Ret::Const(None,Some(f))=>print!("{} ",f),
-   Ret::Name(s)=>{
-    match var[scope].get(s) {
-     Some(v)=> run(&vec![v.clone()],var,fun,scope).print(var,fun,scope),
-     _=>{
-      if scope==0 {
-       panic!("Undefined variable '{}'",s);
-      }
-      self.print(var,fun,scope-1);
-     },
-    }
-   },
    _=>{ panic!("Undefined result"); },
   }
  }
@@ -261,7 +249,7 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
    if name=="print" {
     for j in args {
      res=run(&vec![j],var,fun,scope);
-     res.print(var,fun,scope);
+     res.print();
     }
     println!();
    } else if name=="add" {
@@ -368,6 +356,39 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
      Ret::Const(None,Some(f))=>res=Ret::Const(None,Some(f.log(b))),
      _=>{ panic!("Unexpected type"); },
     }
+   } else if name=="zero" {
+    if args.len()!=1 {
+     panic!("Expected 1 argument");
+    }
+    let a=run(&vec![args[0].clone()],var,fun,scope);
+    match a {
+     Ret::Const(None,Some(0.0))=>res=Ret::Const(None,Some(1.0)),
+     _=>res=Ret::Const(None,Some(0.0)),
+    }
+   } else if name=="pos" {
+    if args.len()!=1 {
+     panic!("Expected 1 argument");
+    }
+    let a=run(&vec![args[0].clone()],var,fun,scope);
+    match a {
+     Ret::Const(None,Some(f))=>{
+      if f>0.0 { res=Ret::Const(None,Some(1.0)); }
+      else { res=Ret::Const(None,Some(0.0)); }
+     },
+     _=>res=Ret::Const(None,Some(0.0)),
+    }
+   } else if name=="neg" {
+    if args.len()!=1 {
+     panic!("Expected 1 argument");
+    }
+    let a=run(&vec![args[0].clone()],var,fun,scope);
+    match a {
+     Ret::Const(None,Some(f))=>{
+      if f<0.0 { res=Ret::Const(None,Some(1.0)); }
+      else { res=Ret::Const(None,Some(0.0)); }
+     },
+     _=>res=Ret::Const(None,Some(0.0)),
+    }
    } else if name=="let" {
     let mut vname:String;
     if args.len()==2 {
@@ -397,7 +418,7 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
     } else {
      panic!("Expected 2 or 3 arguments");
     }
-    res=Ret::Name(vname.clone());
+    res=Ret::Const(Some(vname.clone()),None);
    } else {
     if fun[scope].get(&name).is_none() {
      if var[scope].get(&name).is_none() {
