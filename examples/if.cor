@@ -1,0 +1,5 @@
+let a (sub 1 2); # a = -1
+# -1 is negative => prints "Hello World"
+if (neg a) (print "Hello World");
+# -1 is not positive => prints "Goodbye World"
+if (pos a) (print "Hello Wolrd") (print "Goodbye World");
