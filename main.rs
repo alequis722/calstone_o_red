@@ -89,17 +89,6 @@ fn lex(code:String)->Vec<Token> {
    }
    res.push(Token{kind:TokenType::Const,sval:None,fval:Some(word.parse::<f32>().unwrap())});
    word.clear();
-  } else if code.chars().nth(i).unwrap()=='"' {
-   i+=1;
-   c+=1;
-   while i<len {
-    if code.chars().nth(i).unwrap()=='"' { c-=1; }
-    if c==0 { break; }
-    word.push(code.chars().nth(i).unwrap());
-    i+=1;
-   }
-   res.push(Token{kind:TokenType::Const,sval:Some(word.clone()),fval:None});
-   word.clear();
   } else if code.chars().nth(i).unwrap()=='#' {
    i+=1;
    if i<len && code.chars().nth(i).unwrap()=='(' {
@@ -137,7 +126,18 @@ fn lex(code:String)->Vec<Token> {
     res.push(Token{kind:TokenType::OParen,sval:None,fval:None});
    } else if code.chars().nth(i).unwrap()==')' {
     res.push(Token{kind:TokenType::CParen,sval:None,fval:None});
+   } else if code.chars().nth(i).unwrap()=='"' {
+   i+=1;
+   c+=1;
+   while i<len {
+    if code.chars().nth(i).unwrap()=='"' { c-=1; }
+    if c==0 { break; }
+    word.push(code.chars().nth(i).unwrap());
+    i+=1;
    }
+   res.push(Token{kind:TokenType::Const,sval:Some(word.clone()),fval:None});
+   word.clear();
+  }
   }
   i+=1;
  }
