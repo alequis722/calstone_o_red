@@ -427,14 +427,14 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
      }
      vname=args[0].sval.clone().unwrap();
      vname.shrink_to_fit();
-     let argc=args[1].fval.clone().unwrap();
-     if argc.fract()>0.0 {
-      panic!("Expected a whole number, got {}",argc);
+     let fargc=args[1].fval.clone().unwrap();
+     if fargc.fract()>0.0 {
+      panic!("Expected a whole number, got {}",fargc);
      }
-     if argc<=0.0 {
-      panic!("Expected a positive non-zero value");
+     if fargc<=0.0 {
+      panic!("Expected a positive non-zero value, got {}",fargc);
      }
-     fun[scope].insert(vname.clone(),(argc as i32,args[2].clone()));
+     fun[scope].insert(vname.clone(),(fargc as i32,args[2].clone()));
     } else {
      panic!("Expected 2 or 3 arguments");
     }
@@ -473,7 +473,7 @@ fn run(ast:&Vec<Ast>,var:&mut Vec<HashMap<String,Ast>>,fun:&mut Vec<HashMap<Stri
 fn main() {
  let argv:Vec<String>=args().collect();
  if argv.len()==1 {
-  panic!("Expected a file");
+  panic!("Usage: cor <file>");
  } else if !argv[1].ends_with(".cor") {
   panic!("File has to end with '.cor'");
  }
