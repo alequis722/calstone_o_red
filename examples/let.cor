@@ -10,3 +10,4 @@ b "Called b";
 # invalid functions
 let c 0 (print "Called c");
 let d 1.5 (print "Called d");
+let e -0 (print "Called e");
